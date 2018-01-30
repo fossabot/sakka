@@ -16,5 +16,5 @@ using System.Threading.Tasks;
 
 namespace Sakka
 {
-    public delegate Task RequestDelegate(Context context);
+    public delegate Task MessageDelegate(Context context);
 }

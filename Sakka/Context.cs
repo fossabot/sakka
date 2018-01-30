@@ -19,13 +19,23 @@ namespace Sakka
 {
     public class Context
     {
-        internal Context(Message req)
+        internal Context(Message message)
         {
-            Request = req;
+            Message = message;
             MiddlewareData = new Dictionary<string, object>();
         }
 
-        public Message Request { get; }
+        internal Context(CallbackQuery callbackQuery)
+        {
+            CallbackQuery = callbackQuery;
+            MiddlewareData = new Dictionary<string, object>();
+
+            Message = callbackQuery.Message;
+        }
+
+        public Message Message { get; }
+
+        public CallbackQuery CallbackQuery { get; }
 
         public IDictionary<string, object> MiddlewareData { get; }
     }

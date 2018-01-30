@@ -23,17 +23,18 @@ using Telegram.Bot;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Sakka
 {
     public class Client
     {
         private readonly ILogger<Client> _logger;
-        private readonly IList<Func<RequestDelegate, RequestDelegate>> _components = new List<Func<RequestDelegate, RequestDelegate>>();
+        private readonly IList<Func<MessageDelegate, MessageDelegate>> _components = new List<Func<MessageDelegate, MessageDelegate>>();
 
         private ITelegramBotClient _client;
         private string _username;
-        private RequestDelegate _application;
+        private MessageDelegate _application;
 
         public Client(ILogger<Client> logger)
         {
@@ -85,51 +86,81 @@ namespace Sakka
             _logger.LogDebug("Composing components...");
 
             Task App(Context context) => Task.CompletedTask;
-            _application = _components.Reverse().Aggregate((RequestDelegate) App, (current, component) => component(current));
+            _application = _components.Reverse().Aggregate((MessageDelegate) App, (current, component) => component(current));
 
             _logger.LogDebug($"{_components.Count + 1} components composed");
 
             _client.OnMessage += MessageReceived;
+            _client.OnCallbackQuery += CallbackQueryReceived;
             _client.StartReceiving();
 
             _logger.LogInformation("Started");
         }
 
-        public async Task SendTextAsync(ChatId chatId, string text, int replyToMessageId = 0, bool isMarkdown = false)
+        public async Task SendTextAsync(ChatId chatId, string text, int replyToMessageId = 0, bool isMarkdown = false, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending text message...");
 
             await _client.SendChatActionAsync(chatId, ChatAction.Typing);
-            var msg = await _client.SendTextMessageAsync(
+            var message = await _client.SendTextMessageAsync(
                 chatId,
                 text,
                 isMarkdown ? ParseMode.Markdown : ParseMode.Default,
                 replyToMessageId: replyToMessageId);
 
             _logger.LogDebug("Message sent");
-            _logger.LogTrace($"<< {msg.Chat.Id} {msg.From.Id} {msg.MessageId} {msg.Type} {msg.Text}");
+            _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type} {message.Text}");
         }
 
-        public async Task SendPhotoAsync(ChatId chatId, Uri uri)
+        public async Task SendPhotoAsync(ChatId chatId, FileToSend photo, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending photo message...");
 
             await _client.SendChatActionAsync(chatId, ChatAction.UploadPhoto);
-            var photo = new FileToSend(uri);
-            var msg = await _client.SendPhotoAsync(chatId, photo);
+            var message = await _client.SendPhotoAsync(
+                chatId,
+                photo,
+                replyToMessageId: replyToMessageId,
+                replyMarkup: replyMarkup);
 
             _logger.LogDebug("Message sent");
-            _logger.LogTrace($"<< {msg.Chat.Id} {msg.From.Id} {msg.MessageId} {msg.Type}");
+            _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type}");
+        }
+
+        public async Task SendDocumentAsync(ChatId chatId, FileToSend document, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
+        {
+            _logger.LogDebug("Sending document message...");
+
+            await _client.SendChatActionAsync(chatId, ChatAction.UploadDocument);
+            
+            var message = await _client.SendDocumentAsync(
+                chatId,
+                document,
+                replyToMessageId: replyToMessageId);
+
+            _logger.LogDebug("Message sent");
+            _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type}");
         }
 
         private void MessageReceived(object sender, MessageEventArgs e)
         {
-            var msg = e.Message;
+            var message = e.Message;
 
             _logger.LogDebug("Message received");
-            _logger.LogTrace($">> {msg.Chat.Id} {msg.From.Id} {msg.MessageId} {msg.Type} {msg.Text}");
+            _logger.LogTrace($">> {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type} {message.Text}");
 
-            var context = new Context(msg);
+            var context = new Context(message);
+            _application(context);
+        }
+
+        private void CallbackQueryReceived(object sender, CallbackQueryEventArgs e)
+        {
+            var callbackQuery = e.CallbackQuery;
+
+            _logger.LogDebug("Callback query received");
+            _logger.LogTrace($">> {callbackQuery.Message.Chat.Id} {callbackQuery.From.Id} {callbackQuery.Message.MessageId} Callback Query {callbackQuery.Data}");
+
+            var context = new Context(callbackQuery);
             _application(context);
         }
     }

@@ -18,17 +18,25 @@ namespace Sakka.Routing
 {
     internal class Route
     {
-        internal Route(MessageType type, string pattern, RequestDelegate middleware)
+        internal Route(MessageDelegate middleware)
+        {
+            IsCallbackQueryRoute = true;
+            Middleware = middleware;
+        }
+
+        internal Route(MessageType type, string pattern, MessageDelegate middleware)
         {
             Type = type;
-            Middleware = middleware;
             Pattern = pattern;
+            Middleware = middleware;
         }
 
         public MessageType Type { get; }
 
-        public RequestDelegate Middleware { get; }
-
         public string Pattern { get; }
+
+        public bool IsCallbackQueryRoute { get; }
+
+        public MessageDelegate Middleware { get; }
     }
 }

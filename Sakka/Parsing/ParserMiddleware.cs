@@ -32,15 +32,21 @@ namespace Sakka.Parsing
         {
             return async (context, next) =>
             {
-                if (context.Request.Type != MessageType.TextMessage)
+                if (context.CallbackQuery != null)
                 {
-                    return;
+                    var callbackQueryArgs = context.CallbackQuery.Data.Split(' ');
+                    context.MiddlewareData.Add("callbackQueryArgs", callbackQueryArgs);
+
+                    _logger.LogDebug($"{callbackQueryArgs.Length} arguments parsed from callback query");
                 }
 
-                var args = context.Request.Text.Split(' ');
-                context.MiddlewareData.Add("args", args);
+                if (context.Message.Type == MessageType.TextMessage)
+                {
+                    var messageArgs = context.Message.Text.Split(' ');
+                    context.MiddlewareData.Add("messageArgs", messageArgs);
 
-                _logger.LogDebug($"{args.Length} arguments parsed");
+                    _logger.LogDebug($"{messageArgs.Length} arguments parsed from message");
+                }
 
                 await next();
             };

@@ -43,7 +43,7 @@ namespace Sakka.Example
 
             routerMiddleware.AddCommand("ping", async context =>
                 {
-                    await client.SendTextAsync(context.Request.Chat, "pong", context.Request.MessageId);
+                    await client.SendTextAsync(context.Message.Chat, "pong", context.Message.MessageId);
                 });
 
             client.Use(parserMiddleware.Parser())

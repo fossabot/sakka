@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -31,38 +32,64 @@ namespace Sakka.Routing
             _logger = logger;
         }
 
-        public RouterMiddleware AddCommand(string command, RequestDelegate middleware)
+        public RouterMiddleware AddCommand(string command, MessageDelegate middleware)
         {
-            return Text($@"^\/{command}(@.+)?(\s.+)*$", middleware);
+            return AddTextRoute($@"^\/{command}(@.+)?(\s.+)*$", middleware);
+        }
+
+        public RouterMiddleware AddCallbackQueryRoute(MessageDelegate middleware)
+        {
+            _logger.LogDebug("Adding route...");
+            _logger.LogTrace("Type: Callback query");
+
+            _routes.Add(new Route(middleware));
+
+            _logger.LogDebug("Route added");
+
+            return this;
         }
 
         public Func<Context, Func<Task>, Task> Routes()
         {
             return async (context, next) =>
             {
-                foreach (var router in _routes)
+                Route matchedRoute = null;
+
+                if (context.CallbackQuery != null)
                 {
-                    if (context.Request.Type != router.Type)
+                    matchedRoute = _routes.First(x => x.IsCallbackQueryRoute);
+                }
+                else
+                {
+                    foreach (var route in _routes)
                     {
-                        continue;
+                        if (context.Message.Type != route.Type)
+                        {
+                            continue;
+                        }
+
+                        if (context.Message.Type == MessageType.TextMessage &&
+                            !Regex.IsMatch(context.Message.Text, route.Pattern))
+                        {
+                            continue;
+                        }
+
+                        matchedRoute = route;
+                        break;
                     }
+                }
 
-                    if (context.Request.Type == MessageType.TextMessage &&
-                        !Regex.IsMatch(context.Request.Text, router.Pattern))
-                    {
-                        continue;
-                    }
-
-                    _logger.LogDebug("route matched");
-
-                    await router.Middleware(context);
+                if (matchedRoute != null)
+                {
+                    _logger.LogDebug("Route matched");
+                    await matchedRoute.Middleware(context);
                 }
 
                 await next();
             };
         }
 
-        private RouterMiddleware Text(string pattern, RequestDelegate middleware)
+        private RouterMiddleware AddTextRoute(string pattern, MessageDelegate middleware)
         {
             _logger.LogDebug("Adding route...");
             _logger.LogTrace($"Type: {MessageType.TextMessage.ToString()}");
