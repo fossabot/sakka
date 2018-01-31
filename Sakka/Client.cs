@@ -158,7 +158,7 @@ namespace Sakka
             var callbackQuery = e.CallbackQuery;
 
             _logger.LogDebug("Callback query received");
-            _logger.LogTrace($">> {callbackQuery.Message.Chat.Id} {callbackQuery.From.Id} {callbackQuery.Message.MessageId} Callback Query {callbackQuery.Data}");
+            _logger.LogTrace($">> {callbackQuery.Message.Chat.Id} {callbackQuery.From.Id} {callbackQuery.Message.MessageId} CallbackQuery {callbackQuery.Data}");
 
             var context = new Context(callbackQuery);
             _application(context);
