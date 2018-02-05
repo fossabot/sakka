@@ -106,7 +106,8 @@ namespace Sakka
                 chatId,
                 text,
                 isMarkdown ? ParseMode.Markdown : ParseMode.Default,
-                replyToMessageId: replyToMessageId);
+                replyToMessageId: replyToMessageId,
+                replyMarkup: replyMarkup);
 
             _logger.LogDebug("Message sent");
             _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type} {message.Text}");
@@ -140,6 +141,23 @@ namespace Sakka
 
             _logger.LogDebug("Message sent");
             _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type}");
+        }
+
+        public async Task EditTextAsync(Message originalMessage, string text, bool isMarkdown = false, IReplyMarkup replyMarkup = null)
+        {
+            _logger.LogDebug("Editing text message...");
+
+            await _client.SendChatActionAsync(originalMessage.Chat, ChatAction.Typing);
+
+            var message = await _client.EditMessageTextAsync(
+                originalMessage.Chat,
+                originalMessage.MessageId,
+                text,
+                isMarkdown ? ParseMode.Markdown : ParseMode.Default,
+                replyMarkup: replyMarkup);
+
+            _logger.LogDebug("Message Edited");
+            _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type} {message.Text}");
         }
 
         private void MessageReceived(object sender, MessageEventArgs e)
