@@ -30,15 +30,14 @@ namespace Sakka
     public class Client
     {
         private readonly ILogger<Client> _logger;
-        private readonly IList<Func<MessageDelegate, MessageDelegate>> _components = new List<Func<MessageDelegate, MessageDelegate>>();
-
+        private readonly IList<Func<MessageDelegate, MessageDelegate>> _components;
         private ITelegramBotClient _client;
-        private string _username;
         private MessageDelegate _application;
 
         public Client(ILogger<Client> logger)
         {
             _logger = logger;
+            _components = new List<Func<MessageDelegate, MessageDelegate>>();
         }
 
         public Client Use(Func<Context, Func<Task>, Task> middleware)
@@ -61,32 +60,19 @@ namespace Sakka
         public void Run(IConfigurationRoot config)
         {
             _logger.LogInformation("Starting...");
-            
-            if (config["token"] == null)
-            {
-                _logger.LogCritical("You have to specifies the token of your Telegram bot.");
-                Environment.Exit(1);
-            }
 
             _logger.LogTrace($"Token: {config["token"]}");
             _logger.LogTrace($"Proxy: {config["proxy"]}");
-
-            var proxy = config["proxy"] != null ? new WebProxy(config["proxy"]) : null;
-            _client = new TelegramBotClient(config["token"], proxy);
-
-            _logger.LogDebug("Getting username...");
-
-            var me = _client.GetMeAsync();
-            me.Wait();
-            _username = me.Result.Username;
-
-            _logger.LogDebug("username got");
-            _logger.LogTrace($"Username: {_username}");
+            
+            _client = new TelegramBotClient(config["token"],
+                config["proxy"] != null ? new WebProxy(config["proxy"]) : null);
 
             _logger.LogDebug("Composing components...");
 
             Task App(Context context) => Task.CompletedTask;
-            _application = _components.Reverse().Aggregate((MessageDelegate) App, (current, component) => component(current));
+            _application = _components
+                .Reverse()
+                .Aggregate((MessageDelegate) App, (current, component) => component(current));
 
             _logger.LogDebug($"{_components.Count + 1} components composed");
 
@@ -97,64 +83,56 @@ namespace Sakka
             _logger.LogInformation("Started");
         }
 
-        public async Task SendTextAsync(ChatId chatId, string text, int replyToMessageId = 0, bool isMarkdown = false, IReplyMarkup replyMarkup = null)
+        public async Task SendTextAsync(ChatId chatId, string text,
+            ParseMode parseMode = ParseMode.Default, bool disableWebPagePreview = false, bool disableNotification = false,
+            int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending text message...");
 
             await _client.SendChatActionAsync(chatId, ChatAction.Typing);
-            var message = await _client.SendTextMessageAsync(
-                chatId,
-                text,
-                isMarkdown ? ParseMode.Markdown : ParseMode.Default,
-                replyToMessageId: replyToMessageId,
-                replyMarkup: replyMarkup);
+            var message = await _client.SendTextMessageAsync(chatId, text,
+                parseMode, disableWebPagePreview, disableNotification,
+                replyToMessageId, replyMarkup);
 
             _logger.LogDebug("Message sent");
             _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type} {message.Text}");
         }
 
-        public async Task SendPhotoAsync(ChatId chatId, FileToSend photo, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
+        public async Task SendPhotoAsync(ChatId chatId, FileToSend photo,
+            string caption = "", bool disableNotification = false, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending photo message...");
 
             await _client.SendChatActionAsync(chatId, ChatAction.UploadPhoto);
-            var message = await _client.SendPhotoAsync(
-                chatId,
-                photo,
-                replyToMessageId: replyToMessageId,
-                replyMarkup: replyMarkup);
+            var message = await _client.SendPhotoAsync(chatId, photo,
+                caption, disableNotification, replyToMessageId, replyMarkup);
 
             _logger.LogDebug("Message sent");
             _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type}");
         }
 
-        public async Task SendDocumentAsync(ChatId chatId, FileToSend document, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
+        public async Task SendDocumentAsync(ChatId chatId, FileToSend document,
+            string caption = "", bool disableNotification = false, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending document message...");
 
             await _client.SendChatActionAsync(chatId, ChatAction.UploadDocument);
-            
-            var message = await _client.SendDocumentAsync(
-                chatId,
-                document,
-                replyToMessageId: replyToMessageId);
+            var message = await _client.SendDocumentAsync(chatId, document,
+                caption, disableNotification, replyToMessageId, replyMarkup);
 
             _logger.LogDebug("Message sent");
             _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type}");
         }
 
-        public async Task EditTextAsync(Message originalMessage, string text, bool isMarkdown = false, IReplyMarkup replyMarkup = null)
+        public async Task EditTextAsync(ChatId chatId, int messageId, string text,
+            ParseMode parseMode = ParseMode.Default, bool disableWebPagePreview = false, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Editing text message...");
 
-            await _client.SendChatActionAsync(originalMessage.Chat, ChatAction.Typing);
+            await _client.SendChatActionAsync(chatId, ChatAction.Typing);
 
-            var message = await _client.EditMessageTextAsync(
-                originalMessage.Chat,
-                originalMessage.MessageId,
-                text,
-                isMarkdown ? ParseMode.Markdown : ParseMode.Default,
-                replyMarkup: replyMarkup);
+            var message = await _client.EditMessageTextAsync(chatId, messageId, text,
+                parseMode, disableWebPagePreview, replyMarkup);
 
             _logger.LogDebug("Message Edited");
             _logger.LogTrace($"<< {message.Chat.Id} {message.From.Id} {message.MessageId} {message.Type} {message.Text}");

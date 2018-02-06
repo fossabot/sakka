@@ -32,15 +32,23 @@ namespace Sakka.Routing
             _logger = logger;
         }
 
-        public RouterMiddleware AddCommand(string command, MessageDelegate middleware)
+        public RouterMiddleware AddTextRoute(string pattern, MessageDelegate middleware)
         {
-            return AddTextRoute($@"^\/{command}(@.+)?(\s.+)*$", middleware);
+            _logger.LogDebug("Adding route...");
+            _logger.LogTrace($"Type: {MessageType.TextMessage}");
+            _logger.LogTrace($"Pattern: {pattern}");
+
+            _routes.Add(new Route(MessageType.TextMessage, pattern, middleware));
+
+            _logger.LogDebug("Route added");
+
+            return this;
         }
 
         public RouterMiddleware AddCallbackQueryRoute(MessageDelegate middleware)
         {
             _logger.LogDebug("Adding route...");
-            _logger.LogTrace("Type: Callback query");
+            _logger.LogTrace("Type: CallbackQuery");
 
             _routes.Add(new Route(middleware));
 
@@ -87,19 +95,6 @@ namespace Sakka.Routing
 
                 await next();
             };
-        }
-
-        private RouterMiddleware AddTextRoute(string pattern, MessageDelegate middleware)
-        {
-            _logger.LogDebug("Adding route...");
-            _logger.LogTrace($"Type: {MessageType.TextMessage.ToString()}");
-            _logger.LogTrace($"Pattern: {pattern}");
-
-            _routes.Add(new Route(MessageType.TextMessage, pattern, middleware));
-
-            _logger.LogDebug("Route added");
-
-            return this;
         }
     }
 }

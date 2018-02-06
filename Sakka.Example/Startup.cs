@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sakka.Parsing;
 using Sakka.Routing;
+using Sakka.Routing.Extensions;
 
 namespace Sakka.Example
 {
@@ -34,6 +35,7 @@ namespace Sakka.Example
         internal void Run()
         {
             var services = ConfigureServices();
+
             var loggerFactory = services.GetRequiredService<ILoggerFactory>();
             Configure(loggerFactory);
             
@@ -42,11 +44,13 @@ namespace Sakka.Example
             var routerMiddleware = services.GetRequiredService<RouterMiddleware>();
 
             routerMiddleware.AddCommand("ping", async context =>
-                {
-                    await client.SendTextAsync(context.Message.Chat, "pong", context.Message.MessageId);
-                });
+            {
+                await client.SendTextAsync(context.Message.Chat, "pong",
+                    replyToMessageId: context.Message.MessageId);
+            });
 
-            client.Use(parserMiddleware.Parser())
+            client
+                .Use(parserMiddleware.Parser())
                 .Use(routerMiddleware.Routes())
                 .Run(_config);
         }
@@ -63,7 +67,8 @@ namespace Sakka.Example
 
         private void Configure(ILoggerFactory loggerFactory)
         {
-            _logger = loggerFactory.AddConsole(LogLevel.Trace)
+            _logger = loggerFactory
+                .AddConsole(LogLevel.Trace)
                 .CreateLogger<Startup>();
             
             _logger.LogInformation("Startup Configured");

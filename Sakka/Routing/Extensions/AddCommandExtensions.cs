@@ -12,28 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System.Collections.Generic;
-using System.Threading;
-using Microsoft.Extensions.Configuration;
-
-namespace Sakka.Example
+namespace Sakka.Routing.Extensions
 {
-    internal static class Program
+    public static class AddCommandExtensions
     {
-        internal static void Main(string[] args)
+        public static RouterMiddleware AddCommand(this RouterMiddleware routerMiddleware,
+            string command, MessageDelegate middleware)
         {
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string>
-                {
-                    { "token", "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" }
-                })
-                .Build();
-
-            new Startup(config)
-                .Run();
-
-            new ManualResetEvent(false)
-                .WaitOne();
+            return routerMiddleware.AddTextRoute($@"^\/{command}(@.+)?(\s.+)*$", middleware);
         }
     }
 }
