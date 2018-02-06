@@ -84,7 +84,8 @@ namespace Sakka
         }
 
         public async Task SendTextAsync(ChatId chatId, string text,
-            ParseMode parseMode = ParseMode.Default, bool disableWebPagePreview = false, bool disableNotification = false,
+            ParseMode parseMode = ParseMode.Default,
+            bool disableWebPagePreview = false, bool disableNotification = false,
             int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending text message...");
@@ -99,7 +100,8 @@ namespace Sakka
         }
 
         public async Task SendPhotoAsync(ChatId chatId, FileToSend photo,
-            string caption = "", bool disableNotification = false, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
+            string caption = "",
+            bool disableNotification = false, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending photo message...");
 
@@ -112,7 +114,8 @@ namespace Sakka
         }
 
         public async Task SendDocumentAsync(ChatId chatId, FileToSend document,
-            string caption = "", bool disableNotification = false, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
+            string caption = "",
+            bool disableNotification = false, int replyToMessageId = 0, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Sending document message...");
 
@@ -125,11 +128,10 @@ namespace Sakka
         }
 
         public async Task EditTextAsync(ChatId chatId, int messageId, string text,
-            ParseMode parseMode = ParseMode.Default, bool disableWebPagePreview = false, IReplyMarkup replyMarkup = null)
+            ParseMode parseMode = ParseMode.Default,
+            bool disableWebPagePreview = false, IReplyMarkup replyMarkup = null)
         {
             _logger.LogDebug("Editing text message...");
-
-            await _client.SendChatActionAsync(chatId, ChatAction.Typing);
 
             var message = await _client.EditMessageTextAsync(chatId, messageId, text,
                 parseMode, disableWebPagePreview, replyMarkup);
